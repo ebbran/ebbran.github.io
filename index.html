@@ -86,9 +86,20 @@ footer{border-top:1px solid var(--line);padding:28px 0;text-align:center;color:v
 .rv{opacity:0;transform:translateY(28px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
 .rv.in{opacity:1;transform:none}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rv{opacity:1;transform:none}html{scroll-behavior:auto}}
+
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.blobs{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden}
+.blobs i{position:absolute;width:60vmax;height:60vmax;border-radius:50%;opacity:.5;will-change:transform;
+ background:radial-gradient(circle,var(--glow),transparent 65%)}
+.blobs i:nth-child(1){top:-20vmax;right:-15vmax;animation:drift1 26s ease-in-out infinite alternate}
+.blobs i:nth-child(2){bottom:-25vmax;left:-20vmax;animation:drift2 32s ease-in-out infinite alternate;background:radial-gradient(circle,rgba(6,182,212,.14),transparent 65%)}
+@keyframes drift1{to{transform:translate3d(-12vmax,14vmax,0) scale(1.15)}}
+@keyframes drift2{to{transform:translate3d(14vmax,-10vmax,0) scale(1.1)}}
 </style>
 </head>
 <body>
+<div class="blobs"><i></i><i></i></div>
+<canvas id="bg" aria-hidden="true"></canvas>
 <div id="bar"></div>
 <nav><div class="wrap">
   <a href="#top" class="logo">ebin<span class="grad">.dev</span></a>
@@ -247,6 +258,30 @@ document.querySelectorAll('.f').forEach(function(b){b.onclick=function(){
 var secs=document.querySelectorAll('section[id]'),links=document.querySelectorAll('.links a');
 var so=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting)links.forEach(function(a){a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id)})})},{rootMargin:'-45% 0px -50% 0px'});
 secs.forEach(function(s){so.observe(s)});
+// animated neural-network background (non-interactive, pauses when hidden)
+(function(){
+var c=document.getElementById('bg'),x=c.getContext('2d'),W,H,P=[],run=true,m={x:-999,y:-999},dpr=Math.min(devicePixelRatio||1,2);
+var still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function col(){var s=getComputedStyle(root);return s.getPropertyValue('--a1').trim()||'#5b5bf0'}
+function hex(h,a){h=h.replace('#','');if(h.length===3)h=h.replace(/./g,'$&$&');return 'rgba('+parseInt(h.slice(0,2),16)+','+parseInt(h.slice(2,4),16)+','+parseInt(h.slice(4,6),16)+','+a+')'}
+function size(){W=innerWidth;H=innerHeight;c.width=W*dpr;c.height=H*dpr;x.setTransform(dpr,0,0,dpr,0,0);
+  var n=Math.round(Math.min(70,W*H/20000));P=[];for(var i=0;i<n;i++)P.push({x:Math.random()*W,y:Math.random()*H,vx:(Math.random()-.5)*.35,vy:(Math.random()-.5)*.35,r:Math.random()*1.4+.8})}
+function draw(){
+  x.clearRect(0,0,W,H);var k=col(),D=130;
+  for(var i=0;i<P.length;i++){var p=P[i];
+    if(!still){p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;
+      var dx=p.x-m.x,dy=p.y-m.y,d=dx*dx+dy*dy;if(d<14400){var f=(1-Math.sqrt(d)/120)*.6;p.x+=dx*f*.03;p.y+=dy*f*.03}}
+    x.fillStyle=hex(k,.55);x.beginPath();x.arc(p.x,p.y,p.r,0,6.283);x.fill();
+    for(var j=i+1;j<P.length;j++){var q=P[j],ax=p.x-q.x,ay=p.y-q.y,dd=ax*ax+ay*ay;
+      if(dd<D*D){x.strokeStyle=hex(k,.22*(1-Math.sqrt(dd)/D));x.lineWidth=1;x.beginPath();x.moveTo(p.x,p.y);x.lineTo(q.x,q.y);x.stroke()}}}
+  if(run&&!still)requestAnimationFrame(draw)}
+size();draw();
+var rt;addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){size();if(still)draw()},200)});
+addEventListener('pointermove',function(e){m.x=e.clientX;m.y=e.clientY},{passive:true});
+addEventListener('pointerleave',function(){m.x=m.y=-999});
+document.addEventListener('visibilitychange',function(){run=!document.hidden;if(run&&!still)requestAnimationFrame(draw)});
+document.getElementById('theme').addEventListener('click',function(){setTimeout(function(){if(still)draw()},50)});
+})();
 })();
 </script>
 </body>
